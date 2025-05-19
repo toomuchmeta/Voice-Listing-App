@@ -37,51 +37,61 @@ export default function VoiceListingApp() {
   const processVoiceInput = (input) => {
     const lower = input.toLowerCase();
     const isWomen = lower.includes("women") || lower.includes("female");
+    const gender = isWomen ? 'Womens' : 'Mens';
+
     const chest = lower.match(/chest (\d{1,2}(\.\d+)?)/);
     const bust = lower.match(/bust (\d{1,2}(\.\d+)?)/);
     const length = lower.match(/length (\d{1,2}(\.\d+)?)/);
-    const sleeve = lower.match(/sleeve (\d{1,2}(\.\d+)?)/);
     const shoulder = lower.match(/shoulder (\d{1,2}(\.\d+)?)/);
+    const sleeve = lower.match(/sleeve (\d{1,2}(\.\d+)?)/);
+    const tagged = lower.match(/tag(?:ged)?(?: size)? (\w+)/);
+    const fit = lower.match(/fits(?: like)? (?:a )?(mens|womens)? (\w+)/);
+    const madeIn = lower.match(/made in ([a-zA-Z]+)/);
+    const material = lower.match(/(\d+%[a-zA-Z]+(?: ?\/ ?\d+%[a-zA-Z]+)?)/);
+    const condition = lower.match(/(flaws|condition).*?:? (.*)/);
+    const titleMatch = lower.match(/this listing is for a (.*)/);
+    const era = lower.match(/(early|mid|late)? ?(\d{2,4}s?)(?:[- ]?(early|mid|late)? ?(\d{2,4}s?))?/);
 
-    const sleeveless = /(tank top|tube top|vest|sleeveless|camisole|halter|muscle tee)/.test(lower);
-    const measurementLabel = isWomen ? 'Bust' : 'Chest';
-    const measurementValue = isWomen ? (bust ? bust[1] : '[BUST]') : (chest ? chest[1] : '[CHEST]');
-    const sleeveVal = sleeveless ? 'N/A' : (sleeve ? sleeve[1] : '[SLEEVE]');
+    const title = titleMatch ? titleMatch[1].trim() : 'Untitled';
+    const range = era
+      ? `Circa ${era[1] ? era[1][0].toUpperCase() + era[1].slice(1) + ' ' : ''}${era[2]}${era[3] && era[4] ? ' - ' + era[3][0].toUpperCase() + era[3].slice(1) + ' ' + era[4] : ''} Vintage`
+      : 'Circa ???? Vintage';
 
-    const title = lower.split(" ").slice(0, 6).join(" ") + " listing";
+    const formatted = `**${title}**
 
-    const draft = `
-${title}
+HERE
 
-Circa [YEAR RANGE] Vintage
-[BRAND]
-[MATERIAL] / Made in [COUNTRY]
+${range}
+${lower.match(/\bbrand\b/) ? 'BRAND NAME' : ''}
+${madeIn ? 'Made in ' + madeIn[1] : 'Made in ????'}
+${material ? material[1] : 'Material'}
 
-Tagged size [TAGGED SIZE] (${isWomen ? 'Womens' : 'Mens'}) – In my opinion, item fits somewhere around a [FIT ESTIMATE]
+Tagged size ${tagged ? tagged[1].toUpperCase() : '[TAGGED SIZE]'} - In my opinion, item fits somewhere around a ${gender} ${fit ? fit[2] : 'BLAH'}
 
-Measurements taken flat in inches, following Grailed guidelines:
-${measurementLabel}: ${measurementValue}
-Length: ${length ? length[1] : '[LENGTH]'}
-Shoulder: ${shoulder ? shoulder[1] : '[SHOULDER]'}
-Sleeve: ${sleeveVal}
+Measurements (TAKEN LAYING FLAT, IN INCHES)
+Chests: ${isWomen ? (bust ? bust[1] : '') : (chest ? chest[1] : '')}
+Length: ${length ? length[1] : ''}
+Shoulder: ${shoulder ? shoulder[1] : ''}
+Sleeve Length: ${sleeve ? sleeve[1] : ''}
 
-Flaws / Condition:
-[CONDITION NOTES]
+Condition/ Flaws: ${condition ? condition[2] : ''}
 
-AS ALWAYS: Check all photos carefully and read the description fully for info and condition. Item comes as shown and described. Check measurements for sizing, all measurements taken according to Grailed guidelines. Message me with any questions prior to purchase. I typically ship on Mondays and Fridays, and sometimes Wednesdays. All sales are final but please contact me directly if there are any issues with your order.`;
+AS ALWAYS: Check all photos carefully and read the description fully for info and condition. Item comes as shown and described. Check measurements for sizing, all measurements taken according to Grailed guidelines. Message me with any questions prior to purchase. I typically ship on Mondays and Fridays, and sometimes Wednesdays. All sales are final but please contact me directly if there are any issues with your order. 
+-------------------------------------------------------------------------------------------------------------`;
 
-    setFormData({
-      gender: isWomen ? 'Womens' : 'Mens',
+    const formData = {
+      gender,
       chest: chest ? chest[1] : '',
       bust: bust ? bust[1] : '',
       length: length ? length[1] : '',
       shoulder: shoulder ? shoulder[1] : '',
-      sleeve: sleeveVal,
+      sleeve: sleeve ? sleeve[1] : '',
       title,
-      draft
-    });
+      draft: formatted
+    };
 
-    setListing(draft);
+    setFormData(formData);
+    setListing(formatted);
   };
 
   const finalizeListing = async () => {
@@ -131,9 +141,19 @@ AS ALWAYS: Check all photos carefully and read the description fully for info an
                 {listening ? 'Listening...' : 'Start Dictation'}
               </button>
               <p className="text-sm text-gray-700 mb-4">Transcript: {transcript}</p>
-              <div className="space-y-2">
+              <textarea
+                placeholder="Manual entry or override input"
+                rows={6}
+                value={transcript}
+                onChange={(e) => {
+                  setTranscript(e.target.value);
+                  processVoiceInput(e.target.value);
+                }}
+                className="w-full p-2 border rounded mb-4"
+              />
+              <div className="space-y-2 text-sm">
                 <div><strong>Gender:</strong> {formData.gender}</div>
-                <div><strong>{formData.gender === 'Womens' ? 'Bust' : 'Chest'}:</strong> {formData.chest || formData.bust}</div>
+                <div><strong>Chest/Bust:</strong> {formData.chest || formData.bust}</div>
                 <div><strong>Length:</strong> {formData.length}</div>
                 <div><strong>Shoulder:</strong> {formData.shoulder}</div>
                 <div><strong>Sleeve:</strong> {formData.sleeve}</div>
